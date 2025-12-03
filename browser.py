@@ -15,7 +15,8 @@ class URL:
             self.port = 80
         elif self.scheme == "https":
             self.port = 443
-        if ":" in self.host: #URL에 포트가 지정되어 있는 경우
+        # URL에 포트가 지정되어 있는 경우
+        if ":" in self.host:
             self.host, self.port = self.host.split(":",1)
             self.port = int(self.port)
 
@@ -26,13 +27,15 @@ class URL:
             proto=socket.IPPROTO_TCP,
         )
         s.connect((self.host, self.port))
-        if self.scheme == "https": #ssl로 소켓을 감싸줌
+        # ssl로 소켓을 감싸줌
+        if self.scheme == "https":
             ctx = ssl.create_default_context()
             s = ctx.wrap_socket(s, server_hostname=self.host)
 
         request = "GET {} HTTP/1.0\r\n".format(self.path)
         request += "Host: {}\r\n".format(self.host)
-        request += "\r\n" #줄 바꿈을 두 번 하여 서버 요청 END
+        # 줄 바꿈을 두 번 하여 서버 요청 END
+        request += "\r\n"
         s.send(request.encode("utf8"))
 
         response = s.makefile("r", encoding="utf8", newline="\r\n")
@@ -43,9 +46,10 @@ class URL:
             line = response.readline()
             if line == "\r\n": break
             header, value = line.split(":", 1)
-            response_headers[header.casefold()] = value.strip() #헤더는 대소문자 구분하지 않음
+            # 헤더는 대소문자 구분하지 않음
+            response_headers[header.casefold()] = value.strip()
 
-        #헤더 정보를 통해 데이터 특수 형태 여부 확인
+        # 헤더 정보를 통해 데이터 특수 형태 여부 확인
         assert "transfer-encoding" not in response_headers
         assert "content-encoding" not in response_headers
 
