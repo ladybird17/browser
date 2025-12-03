@@ -15,6 +15,9 @@ class URL:
             self.port = 80
         elif self.scheme == "https":
             self.port = 443
+        if ":" in self.host: #URL에 포트가 지정되어 있는 경우
+            self.host, self.port = self.host.split(":",1)
+            self.port = int(self.port)
 
     def request(self):
         s = socket.socket(
