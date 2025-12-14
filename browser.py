@@ -2,23 +2,32 @@ import socket
 import ssl
 
 class URL:
-    def __init__(self, url):
+    def __init__(self, url=None):
         self.scheme, url = url.split("://",1)
-        assert self.scheme in ["http", "https"]
+        self.content = None
 
-        if "/" not in url:
-            url = url + "/"
-        self.host, url = url.split("/",1)
-        self.path = "/" + url
+        if self.scheme in ["http", "https"]:
+            if "/" not in url:
+                url = url + "/"
+            self.host, url = url.split("/",1)
+            self.path = "/" + url
 
-        if self.scheme == "http":
-            self.port = 80
-        elif self.scheme == "https":
-            self.port = 443
-        # URL에 포트가 지정되어 있는 경우
-        if ":" in self.host:
-            self.host, self.port = self.host.split(":",1)
-            self.port = int(self.port)
+            if self.scheme == "http":
+                self.port = 80
+            elif self.scheme == "https":
+                self.port = 443
+            # URL에 포트가 지정되어 있는 경우
+            if ":" in self.host:
+                self.host, self.port = self.host.split(":",1)
+                self.port = int(self.port)
+
+        if self.scheme == "file":
+            print("파일을 읽습니다.", url)
+            if url.startswith("/") and ":" in url[1:3]:
+                url = url[1:]
+
+            with open(url, "r", encoding="utf-8") as f:
+                self.content = f.read()
 
     def request(self):
         print("브라우저가 HTTP/1.1을 지원합니다. (연습용)")
@@ -97,6 +106,8 @@ def build_http_request(method, path, host, headers=None, body=None):
     return "\r\n".join(request_lines)
 
 def show(body):
+    if body is None:
+        return
     in_tag = False
     for c in body:
         if c == "<":
@@ -107,10 +118,19 @@ def show(body):
             print(c, end="")
 
 def load(url):
-    body = url.request()
-    show(body)
+    if url.scheme == "file":
+        show(url.content)
+    else:
+        body = url.request()
+        show(body)
 
 
 if __name__ == "__main__":
     import sys
-    load(URL(sys.argv[1]))
+
+    if len(sys.argv) > 1:
+        url = sys.argv[1]
+    else:
+        # url 없이 요청할 경우 특정 로컬 파일 읽기
+        url = "file:///C:/workspace-study/browser/README.md"
+    load(URL(url))
