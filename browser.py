@@ -2,15 +2,21 @@ import socket
 import ssl
 
 class URL:
-    def __init__(self, url=None):
-        self.scheme, url = url.split("://",1)
+    def __init__(self, url: str):
+        self.url = url
         self.content = None
 
+        if url.startswith("data:"):
+            self.scheme = "data"
+            rest = url[len("data:"):]
+        else:
+            self.scheme, rest = url.split("://", 1)
+
         if self.scheme in ["http", "https"]:
-            if "/" not in url:
-                url = url + "/"
-            self.host, url = url.split("/",1)
-            self.path = "/" + url
+            if "/" not in rest:
+                rest += "/"
+            self.host, path = rest.split("/",1)
+            self.path = "/" + path
 
             if self.scheme == "http":
                 self.port = 80
@@ -22,12 +28,23 @@ class URL:
                 self.port = int(self.port)
 
         if self.scheme == "file":
-            print("파일을 읽습니다.", url)
-            if url.startswith("/") and ":" in url[1:3]:
-                url = url[1:]
+            print("파일을 읽습니다.", rest)
+            path = rest
 
-            with open(url, "r", encoding="utf-8") as f:
+            # Windows file URL: /C:/... → C:/...
+            if path.startswith("/") and ":" in path[1:3]:
+                path = path[1:]
+
+            with open(path, "r", encoding="utf-8") as f:
                 self.content = f.read()
+
+        if self.scheme == "data":
+            # 콤마 기준으로 데이터 분리
+            mediatype, data = rest.split(",", 1)
+            self.content = data
+
+        else:
+            raise ValueError(f"Unsupported scheme: {self.scheme}")
 
     def request(self):
         print("브라우저가 HTTP/1.1을 지원합니다. (연습용)")
@@ -118,7 +135,7 @@ def show(body):
             print(c, end="")
 
 def load(url):
-    if url.scheme == "file":
+    if url.scheme in ["file", "data"]:
         show(url.content)
     else:
         body = url.request()
@@ -131,6 +148,6 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         url = sys.argv[1]
     else:
-        # url 없이 요청할 경우 특정 로컬 파일 읽기
+        # url 없이 실행시 기본 로컬 파일 읽기
         url = "file:///C:/workspace-study/browser/README.md"
     load(URL(url))
