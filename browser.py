@@ -21,6 +21,8 @@ class URL:
             self.port = int(self.port)
 
     def request(self):
+        print("브라우저가 HTTP/1.1을 지원합니다. (연습용)")
+
         s = socket.socket(
             family=socket.AF_INET,
             type=socket.SOCK_STREAM,
@@ -32,10 +34,16 @@ class URL:
             ctx = ssl.create_default_context()
             s = ctx.wrap_socket(s, server_hostname=self.host)
 
-        request = "GET {} HTTP/1.0\r\n".format(self.path)
-        request += "Host: {}\r\n".format(self.host)
-        # 줄 바꿈을 두 번 하여 서버 요청 END
-        request += "\r\n"
+        request = build_http_request(
+            method="GET",
+            path=self.path,
+            host=self.host,
+            headers={
+                "Connection": "close"
+                # HTTP/1.1 에서 Keep-Alive 구현하지 않아도 되도록 응답 후 연결 끊기
+                , "User-Agent": "MySimpleBrowser/0.1"
+            }
+        )
         s.send(request.encode("utf8"))
 
         response = s.makefile("r", encoding="utf8", newline="\r\n")
@@ -56,6 +64,37 @@ class URL:
         body = response.read()
         s.close()
         return body
+
+
+def build_http_request(method, path, host, headers=None, body=None):
+    if headers is None:
+        headers = {}
+
+    # HTTP/1.1 필수 헤더 기본값
+    default_headers = {
+        "Host": host,
+        "Connection": "close",
+        "User-Agent": "MyBrowser/0.1"
+    }
+
+    # 사용자 헤더가 기본값을 덮어쓰게
+    default_headers.update(headers)
+
+    # 요청 라인
+    request_lines = [f"{method} {path} HTTP/1.1"]
+
+    # 헤더 라인
+    for key, value in default_headers.items():
+        request_lines.append(f"{key}: {value}")
+
+    # 헤더 종료를 의미하는 빈 줄
+    request_lines.append("\r\n")
+
+    # 바디가 있으면 추가
+    if body:
+        request_lines.append(body)
+
+    return "\r\n".join(request_lines)
 
 def show(body):
     in_tag = False
